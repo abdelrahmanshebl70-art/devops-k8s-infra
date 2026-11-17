@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: myd
+spec:
+ replicas: 3
+ strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 2
+    maxUnavailable: 0
+ selector:
+   matchLabels:
+     env: dev
+ template:
+  metadata:
+   labels:
+      env: dev 
+  spec: 
+   serviceAccountName: myaccount
+   tolerations:
+     - key: pro 
+       value: env
+       effect: NoSchedule
+
+   volumes:
+     - name: myv
+       configMap:
+         name: myconfig
+     - name: st1
+       persistentVolumeClaim:
+         claimName: mypvc
+
+   containers:
+    - name: myapp1
+      image: abdelrahmanshipl333/alaa
+      ports:
+       - containerPort: 80
+
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 100m
+          memory: 128Mi
+
+      volumeMounts:
+        - mountPath: /etc/nginx/nginx.conf
+          name: myv
+          subPath: nginx.conf
+        - name: st1
+          mountPath: /data
+      startupProbe:
+       httpGet:
+        path: /
+        port: 80
+       initialDelaySeconds: 5
+       periodSeconds: 5
+       failureThreshold: 10
+
+      livenessProbe:
+       httpGet:
+        path: /
+        port: 80
+       periodSeconds: 10
+
+      readinessProbe:
+       httpGet:
+        path: /
+        port: 80
+       periodSeconds: 10
+
+      lifecycle:
+       preStop:
+        exec:
+          command: ["sh", "-c", "sleep 30"]

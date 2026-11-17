@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+ name: mystate
+spec:
+ serviceName: myhead
+ replicas: 3
+ updateStrategy:
+   type: RollingUpdate
+   rollingUpdate:
+     partition:  0
+ selector: 
+  matchLabels:
+    env: DB
+ template:
+   metadata:
+    labels:
+     env: DB 
+   spec:
+    tolerations:
+      - key: pro 
+        value: env 
+        effect: NoSchedule
+    containers:                                                                                        
+     - name: mydb
+       image: postgres
+       ports:
+         - containerPort: 5432
+       envFrom:
+         - secretRef:
+             name: mysecret 
+       startupProbe:
+         tcpSocket:
+           port: 5432
+         initialDelaySeconds: 10
+         periodSeconds: 5
+         failureThreshold: 30
+       livenessProbe:
+         tcpSocket:
+          port: 5432
+         periodSeconds: 10
+         timeoutSeconds: 5
+       readinessProbe:
+        tcpSocket:
+          port: 5432
+        periodSeconds: 10
+        timeoutSeconds: 5
+       lifecycle:
+        preStop:
+         exec:
+          command: ["pg_ctl", "-D", "/var/lib/postgresql/data", "stop", "-m", "smart"]              
+ volumeClaimTemplates:
+    - metadata:
+        name: mytemplate
+      spec:
+       accessModes:
+         - ReadWriteOnce
+       resources:
+         requests:
+           storage: 3Gi 
+ 
+
+
+    
+ 
